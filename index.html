@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Table of Contents</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background: #f5f5f5;
+}
+
+h1 {
+    text-align: center;
+}
+
+.container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    margin: auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.toc-item {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.toc-text {
+    border: none;
+    border-bottom: 1px solid #ccc;
+    width: 60%;
+}
+
+.dots {
+    flex: 1;
+    border-bottom: 1px dotted black;
+    margin: 0 10px;
+}
+
+.page {
+    width: 50px;
+    text-align: right;
+    border: none;
+    border-bottom: 1px solid #ccc;
+}
+
+button {
+    margin: 10px 5px;
+    padding: 8px 15px;
+    border: none;
+    background: black;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #333;
+}
+</style>
+</head>
+
+<body>
+
+<h1 contenteditable="true" id="title">TABLE OF CONTENTS</h1>
+
+<div class="container" id="toc"></div>
+
+<div style="text-align:center;">
+    <button onclick="addItem()">➕ Add Section</button>
+    <button onclick="saveData()">💾 Save</button>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+    <button onclick="exportExcel()">📊 Export Excel</button>
+</div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+// LOAD SAVED DATA
+window.onload = function() {
+    let saved = JSON.parse(localStorage.getItem("tocData")) || [];
+
+    if (saved.length === 0) {
+        addItem("CHAPTER ONE: INTRODUCTION", "1");
+        addItem("1.1 Background of the Study", "2");
+    } else {
+        saved.forEach(item => addItem(item.text, item.page));
+    }
+};
+
+// ADD ITEM
+function addItem(text = "New Section", page = "0") {
+    const toc = document.getElementById("toc");
+
+    const div = document.createElement("div");
+    div.className = "toc-item";
+
+    div.innerHTML = `
+        <input class="toc-text" value="${text}">
+        <div class="dots"></div>
+        <input class="page" value="${page}">
+        <button onclick="deleteItem(this)">❌</button>
+    `;
+
+    toc.appendChild(div);
+}
+
+// DELETE ITEM
+function deleteItem(btn) {
+    btn.parentElement.remove();
+    saveData();
+}
+
+// SAVE DATA (LOCAL STORAGE)
+function saveData() {
+    const items = document.querySelectorAll(".toc-item");
+    let data = [];
+
+    items.forEach(item => {
+        data.push({
+            text: item.querySelector(".toc-text").value,
+            page: item.querySelector(".page").value
+        });
+    });
+
+    localStorage.setItem("tocData", JSON.stringify(data));
+    alert("Saved successfully!");
+}
+
+// AUTO SAVE
+setInterval(saveData, 5000);
+
+// EXPORT PDF
+function exportPDF() {
+    const element = document.querySelector(".container");
+
+    html2pdf().from(element).save("Table_of_Contents.pdf");
+}
+
+// EXPORT EXCEL
+function exportExcel() {
+    const items = document.querySelectorAll(".toc-item");
+    let data = [["Section", "Page"]];
+
+    items.forEach(item => {
+        data.push([
+            item.querySelector(".toc-text").value,
+            item.querySelector(".page").value
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "TOC");
+
+    XLSX.writeFile(wb, "Table_of_Contents.xlsx");
+}
+</script>
+
+</body>
+</html>
